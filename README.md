@@ -1,4 +1,4 @@
-# herdr-agent-tree
+# herdr-agents-tree
 
 Shows herdr's Agents sidebar as a tree: each workspace is a header, its agents sit underneath with a status glyph and
 colour. It draws nothing itself. It writes per-pane metadata tokens that your sidebar layout renders. Clicking a row
@@ -54,21 +54,21 @@ instead: `rows = [["$ws_header"], ["$tp", "state_icon", "$tl"]]`.
 
 ## Plugin config (optional)
 
-Put a `config.json` in the plugin's config directory (`herdr plugin config-dir harrisonhjones.herdr-tui-agent-tree`):
+Put a `config.json` in the plugin's config directory (`herdr plugin config-dir harrisonhjones.herdr-tui-agents-tree`):
 
 ```json
 { "show_agent_kind": true }
 ```
 
 - `show_agent_kind`: prefix each label with the agent's kind, e.g. `claude Fix login redirect` or `kiro tab 3`. Off
-  unless set to `true`. The prefix doesn't count toward `AGENT_TREE_MAX_LABEL`.
+  unless set to `true`. The prefix doesn't count toward `AGENTS_TREE_MAX_LABEL`.
 
 The file is read on every run, so changes show on the next event or `refresh`. An unreadable or invalid file is ignored
 and logged to the plugin's stderr.
 
 ## Actions
 
-- `herdr plugin action invoke harrisonhjones.herdr-tui-agent-tree.refresh` forces a reconcile.
+- `herdr plugin action invoke harrisonhjones.herdr-tui-agents-tree.refresh` forces a reconcile.
 - `...clear` removes every token this plugin wrote (the sidebar rows go blank).
 - `...doctor` prints the tree it would write without changing anything.
 - `...demo` relabels your real agent rows with fake workspaces (billing-api, mobile-app, docs-site, ...), fake agent
@@ -84,12 +84,12 @@ and logged to the plugin's stderr.
 - Label = the first descriptive one of: the agent name, the tab label, the terminal title. Skipped as not descriptive:
   agent names herdr generates from the pane ID (e.g. `r-wh-p7` for pane `wH:p7`), tab labels that are only a number,
   and the terminal title `Claude Code`. If none is left, the label is `tab <tab label>`, or the agent kind if the tab
-  has no label. `AGENT_TREE_MAX_LABEL` (default 22) truncates it.
+  has no label. `AGENTS_TREE_MAX_LABEL` (default 22) truncates it.
 - Alignment: herdr indents an entry's first row by 1 and later rows by 3, and trims leading whitespace from token
-  values. Agents without a header row are padded with `AGENT_TREE_PAD` (default 2) U+2800 characters so connectors
-  line up. Override the character with `AGENT_TREE_PAD_CHAR`.
+  values. Agents without a header row are padded with `AGENTS_TREE_PAD` (default 2) U+2800 characters so connectors
+  line up. Override the character with `AGENTS_TREE_PAD_CHAR`.
 - Without the plugin (or after `clear`) the agent rows are blank, because the layout only shows plugin tokens.
-- To uninstall cleanly: run `clear`, `herdr plugin unlink harrisonhjones.herdr-tui-agent-tree`, and restore your config.
+- To uninstall cleanly: run `clear`, `herdr plugin unlink harrisonhjones.herdr-tui-agents-tree`, and restore your config.
 
 ## License
 
