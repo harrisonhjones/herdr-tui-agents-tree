@@ -1,0 +1,102 @@
+id = "harrisonhjones.herdr-tui-agent-tree"
+name = "Herdr Agent Tree"
+version = "0.1.0"
+min_herdr_version = "0.9.5"
+description = "Show the Agents sidebar as a workspace -> agent tree with per-agent status, by writing pane metadata tokens ($ws_header, $t_<status>)."
+platforms = ["linux", "macos", "windows"]
+
+# Every event runs the same idempotent full reconcile (agent-tree.js); the event
+# name is informational. Runs are serialized with a lock + dirty flag.
+
+[[startup]]
+command = ["node", "agent-tree.js", "startup"]
+
+[[events]]
+on = "pane.created"
+command = ["node", "agent-tree.js", "pane.created"]
+
+[[events]]
+on = "pane.closed"
+command = ["node", "agent-tree.js", "pane.closed"]
+
+[[events]]
+on = "pane.moved"
+command = ["node", "agent-tree.js", "pane.moved"]
+
+[[events]]
+on = "pane.agent_detected"
+command = ["node", "agent-tree.js", "pane.agent_detected"]
+
+[[events]]
+on = "pane.agent_status_changed"
+command = ["node", "agent-tree.js", "pane.agent_status_changed"]
+
+[[events]]
+on = "tab.created"
+command = ["node", "agent-tree.js", "tab.created"]
+
+[[events]]
+on = "tab.closed"
+command = ["node", "agent-tree.js", "tab.closed"]
+
+[[events]]
+on = "tab.renamed"
+command = ["node", "agent-tree.js", "tab.renamed"]
+
+[[events]]
+on = "tab.moved"
+command = ["node", "agent-tree.js", "tab.moved"]
+
+[[events]]
+on = "workspace.created"
+command = ["node", "agent-tree.js", "workspace.created"]
+
+[[events]]
+on = "workspace.closed"
+command = ["node", "agent-tree.js", "workspace.closed"]
+
+[[events]]
+on = "workspace.renamed"
+command = ["node", "agent-tree.js", "workspace.renamed"]
+
+[[events]]
+on = "workspace.moved"
+command = ["node", "agent-tree.js", "workspace.moved"]
+
+[[events]]
+on = "workspace.reordered"
+command = ["node", "agent-tree.js", "workspace.reordered"]
+
+# herdr plugin action invoke harrisonhjones.herdr-tui-agent-tree.refresh
+[[actions]]
+id = "refresh"
+title = "Refresh agent tree"
+contexts = ["global"]
+command = ["node", "agent-tree.js", "refresh"]
+
+# Remove every token this plugin wrote.
+[[actions]]
+id = "clear"
+title = "Clear agent tree tokens"
+contexts = ["global"]
+command = ["node", "agent-tree.js", "clear"]
+
+# Print the tree it would write, without changing anything.
+[[actions]]
+id = "doctor"
+title = "Print agent tree (no changes)"
+contexts = ["global"]
+command = ["node", "agent-tree.js", "doctor"]
+
+# Temporarily show every status (cycles all agents through working/blocked/done/idle/unknown).
+[[actions]]
+id = "demo"
+title = "Demo: show every status"
+contexts = ["global"]
+command = ["node", "agent-tree.js", "demo"]
+
+[[actions]]
+id = "demo-off"
+title = "Demo off: back to real statuses"
+contexts = ["global"]
+command = ["node", "agent-tree.js", "demo-off"]
