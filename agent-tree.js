@@ -20,6 +20,17 @@ const PAD = Number(process.env.AGENT_TREE_PAD || 2);
 const PAD_CHAR = process.env.AGENT_TREE_PAD_CHAR || '⠀';
 const mode = process.argv[2] || 'refresh';
 
+// Optional config.json in the plugin config dir (`herdr plugin config-dir <id>`):
+//   { "show_agent_kind": true }
+// show_agent_kind prefixes each label with the agent's kind (e.g. "claude", "kiro").
+// Off unless set to true.
+const CONFIG_DIR = process.env.HERDR_PLUGIN_CONFIG_DIR || __dirname;
+function readConfig() {
+  try { return JSON.parse(fs.readFileSync(path.join(CONFIG_DIR, 'config.json'), 'utf8')); }
+  catch (e) { if (e.code !== 'ENOENT') process.stderr.write(`config.json ignored: ${e.message}\n`); return {}; }
+}
+const SHOW_KIND = readConfig().show_agent_kind === true;
+
 fs.mkdirSync(STATE_DIR, { recursive: true });
 const STATE_FILE = path.join(STATE_DIR, 'state.json');
 const LOCK = path.join(STATE_DIR, 'lock');
@@ -77,11 +88,25 @@ function entry(status, label, wsLabel, first, last) {
   return { status, tokens };
 }
 
+// Pick the first descriptive label. Skipped as uninformative: agent names that herdr
+// generates from the pane ID (e.g. "r-wh-p7" for pane wH:p7), purely numeric tab labels,
+// and terminal titles that are just the agent's product name (e.g. "Claude Code").
+function agentLabel(agent, tabLabel, title) {
+  const paneSlug = agent.pane_id.toLowerCase().replace(':', '-');
+  const name = agent.name && !agent.name.toLowerCase().endsWith(paneSlug) ? agent.name : '';
+  const tab = tabLabel && !/^\d+$/.test(tabLabel) ? tabLabel : '';
+  const term = title && title !== 'Claude Code' ? title : '';
+  const fallback = tabLabel ? `tab ${tabLabel}` : agent.agent;
+  const prefix = SHOW_KIND && agent.agent ? `${agent.agent} ` : '';
+  return prefix + truncate(name || tab || term || fallback, MAX_LABEL);
+}
+
 // Build desired tokens per agent pane: { pane_id: { status, tokens: {name: value} } }
 function buildDesired(snap) {
   const tabLabel = new Map(snap.tabs.map((t) => [t.tab_id, t.label]));
   const tabOrder = new Map(snap.tabs.map((t, i) => [t.tab_id, i]));
   const paneOrder = new Map(snap.panes.map((p, i) => [p.pane_id, i]));
+  const paneTitle = new Map(snap.panes.map((p) => [p.pane_id, p.terminal_title_stripped]));
   const workspaces = [...snap.workspaces].sort((a, b) => a.number - b.number);
   const desired = {};
   const demo = fs.existsSync(DEMO);
@@ -95,7 +120,7 @@ function buildDesired(snap) {
     if (demo) { ordered.push(...agents); continue; }
     agents.forEach((a, i) => {
       const status = STATUSES.includes(a.agent_status) ? a.agent_status : 'unknown';
-      const label = truncate(a.name || tabLabel.get(a.tab_id) || a.agent, MAX_LABEL);
+      const label = agentLabel(a, tabLabel.get(a.tab_id), paneTitle.get(a.pane_id));
       desired[a.pane_id] = entry(status, label, ws.label, i === 0, i === agents.length - 1);
     });
   }

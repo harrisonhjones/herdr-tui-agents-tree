@@ -14,7 +14,7 @@ focuses the agent (stock herdr behaviour).
 ![Demo mode: fake workspaces and agents in each status](demo.png)
 
 Requires herdr >= 0.9.5 and Node (any recent version) on PATH. Written for Windows, Linux and macOS. It is pure Node and
-calls herdr through `HERDR_BIN_PATH`, but only Windows has been tested so far. Config path elsewhere:
+calls herdr through `HERDR_BIN_PATH`. Tested on Windows and Linux, not yet macOS. Config path outside Windows:
 `~/.config/herdr/config.toml`.
 
 ## Install
@@ -52,6 +52,20 @@ The panel's sort label (top right of the Agents panel) must read **`grouped`**. 
 Optional: the plugin also writes `$tp` (connector) and `$tl` (label), so you can use herdr's own colored status icon
 instead: `rows = [["$ws_header"], ["$tp", "state_icon", "$tl"]]`.
 
+## Plugin config (optional)
+
+Put a `config.json` in the plugin's config directory (`herdr plugin config-dir harrisonhjones.herdr-tui-agent-tree`):
+
+```json
+{ "show_agent_kind": true }
+```
+
+- `show_agent_kind`: prefix each label with the agent's kind, e.g. `claude Fix login redirect` or `kiro tab 3`. Off
+  unless set to `true`. The prefix doesn't count toward `AGENT_TREE_MAX_LABEL`.
+
+The file is read on every run, so changes show on the next event or `refresh`. An unreadable or invalid file is ignored
+and logged to the plugin's stderr.
+
 ## Actions
 
 - `herdr plugin action invoke harrisonhjones.herdr-tui-agent-tree.refresh` forces a reconcile.
@@ -67,7 +81,10 @@ instead: `rows = [["$ws_header"], ["$tp", "state_icon", "$tl"]]`.
 - Every event (pane/tab/workspace changes, agent status changes) runs one idempotent reconcile and writes only
   changed panes. Runs are serialized by a lock under `HERDR_PLUGIN_STATE_DIR`.
 - Status `done` means finished and not yet seen by the server. It can differ from the sidebar's per-client badge.
-- Label = agent name if set, else the tab label, else the agent kind. `AGENT_TREE_MAX_LABEL` (default 22) truncates it.
+- Label = the first descriptive one of: the agent name, the tab label, the terminal title. Skipped as not descriptive:
+  agent names herdr generates from the pane ID (e.g. `r-wh-p7` for pane `wH:p7`), tab labels that are only a number,
+  and the terminal title `Claude Code`. If none is left, the label is `tab <tab label>`, or the agent kind if the tab
+  has no label. `AGENT_TREE_MAX_LABEL` (default 22) truncates it.
 - Alignment: herdr indents an entry's first row by 1 and later rows by 3, and trims leading whitespace from token
   values. Agents without a header row are padded with `AGENT_TREE_PAD` (default 2) U+2800 characters so connectors
   line up. Override the character with `AGENT_TREE_PAD_CHAR`.
