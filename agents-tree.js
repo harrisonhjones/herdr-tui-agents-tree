@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// herdr-agent-tree: renders a workspace -> agent tree in herdr's Agents sidebar
+// herdr-agents-tree: renders a workspace -> agent tree in herdr's Agents sidebar
 // by writing per-pane metadata tokens. Every run is an idempotent full reconcile.
 //
-// Usage: node agent-tree.js [event|refresh|clear|doctor]
+// Usage: node agents-tree.js [event|refresh|clear|doctor]
 'use strict';
 const { spawnSync } = require('node:child_process');
 const fs = require('node:fs');
@@ -10,14 +10,14 @@ const path = require('node:path');
 
 const HERDR = process.env.HERDR_BIN_PATH || 'herdr';
 const STATE_DIR = process.env.HERDR_PLUGIN_STATE_DIR || path.join(__dirname, '.state');
-const SOURCE = 'agent-tree';
+const SOURCE = 'agents-tree';
 const STATUSES = ['working', 'blocked', 'done', 'idle', 'unknown'];
 const GLYPH = { working: '◐', blocked: '!', done: '✓', idle: '○', unknown: '?' };
-const MAX_LABEL = Number(process.env.AGENT_TREE_MAX_LABEL || 22);
-const PAD = Number(process.env.AGENT_TREE_PAD || 2);
+const MAX_LABEL = Number(process.env.AGENTS_TREE_MAX_LABEL || 22);
+const PAD = Number(process.env.AGENTS_TREE_PAD || 2);
 // herdr trims leading whitespace from token values, so pad with an invisible non-whitespace
 // character (U+2800 braille blank, one cell wide).
-const PAD_CHAR = process.env.AGENT_TREE_PAD_CHAR || '⠀';
+const PAD_CHAR = process.env.AGENTS_TREE_PAD_CHAR || '⠀';
 const mode = process.argv[2] || 'refresh';
 
 // Optional config.json in the plugin config dir (`herdr plugin config-dir <id>`):
