@@ -79,7 +79,9 @@ and logged to the plugin's stderr.
 ## Notes
 
 - Every event (pane/tab/workspace changes, agent status changes) runs one idempotent reconcile and writes only
-  changed panes. Runs are serialized by a lock under `HERDR_PLUGIN_STATE_DIR`.
+  changed panes. Runs are serialized by a lock under `HERDR_PLUGIN_STATE_DIR`, so writes carry no `--seq`. Each run
+  stops after 25 seconds (herdr calls get only the time left), before another run would take over its lock at 30
+  seconds; panes it didn't get to are written by the next run.
 - Status `done` means finished and not yet seen by the server. It can differ from the sidebar's per-client badge.
 - Label = the first descriptive one of: the agent name, the tab label, the terminal title. Skipped as not descriptive:
   agent names herdr generates from the pane ID (e.g. `r-wh-p7` for pane `wH:p7`), tab labels that are only a number,

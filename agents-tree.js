@@ -37,9 +37,21 @@ const LOCK = path.join(STATE_DIR, 'lock');
 const DIRTY = path.join(STATE_DIR, 'dirty');
 const DEMO = path.join(STATE_DIR, 'demo'); // while present, agents are shown under fake workspaces/names/statuses
 
+// Writes carry no --seq, so only the lock keeps two runs from writing at once. A run whose lock is
+// older than LOCK_STALE_MS is presumed dead and another run takes the lock over (see main). Each
+// run therefore stops by RUN_BUDGET_MS, before that can happen: herdr() gives every call only the
+// time left, and a run that runs out stops writing, releases the lock, and leaves the rest to the
+// next run. RUN_BUDGET_MS must stay below LOCK_STALE_MS.
+const LOCK_STALE_MS = 30000;
+const RUN_BUDGET_MS = 25000;
+const DEADLINE = Date.now() + RUN_BUDGET_MS;
+const outOfTime = () => Date.now() >= DEADLINE;
+
 function herdr(args, { json = true } = {}) {
-  const r = spawnSync(HERDR, args, { encoding: 'utf8', windowsHide: true });
-  if (r.error) throw r.error;
+  const timeout = DEADLINE - Date.now();
+  if (timeout <= 0) throw new Error(`herdr ${args[0]} ${args[1]}: run time budget used up`);
+  const r = spawnSync(HERDR, args, { encoding: 'utf8', windowsHide: true, timeout });
+  if (r.error) throw r.error; // includes ETIMEDOUT when the call outlives the budget
   if (r.status !== 0) throw new Error(`herdr ${args.join(' ')} failed: ${(r.stderr || r.stdout).trim()}`);
   return json ? JSON.parse(r.stdout) : r.stdout;
 }
@@ -134,8 +146,8 @@ function buildDesired(snap) {
   return desired;
 }
 
-function writeTokens(paneId, tokens, seq) {
-  const args = ['pane', 'report-metadata', paneId, '--source', SOURCE, '--seq', String(seq)];
+function writeTokens(paneId, tokens) {
+  const args = ['pane', 'report-metadata', paneId, '--source', SOURCE];
   for (const [k, v] of Object.entries(tokens)) {
     if (v === null) args.push('--clear-token', k);
     else args.push('--token', `${k}=${v}`);
@@ -158,19 +170,22 @@ function reconcile() {
   for (const s of STATUSES) clearAll['t_' + s] = null;
   clearAll.ws_header = null;
 
+  // A pane is recorded in `next` only once its write succeeded, so panes skipped here (a failed
+  // write, or the run out of time) are written on the next run.
   for (const [paneId, d] of Object.entries(desired)) {
     const sig = JSON.stringify(d.tokens);
-    next[paneId] = sig;
-    if (prev[paneId] === sig) continue;
-    try { writeTokens(paneId, d.tokens, Date.now()); writes++; }
-    catch (e) { delete next[paneId]; console.error(String(e.message)); }
+    if (prev[paneId] === sig) { next[paneId] = sig; continue; }
+    if (outOfTime()) continue;
+    try { writeTokens(paneId, d.tokens); writes++; next[paneId] = sig; }
+    catch (e) { console.error(String(e.message)); }
   }
-  // Panes we tagged earlier that no longer host an agent: clear their tokens.
+  // Panes we tagged earlier that no longer host an agent: clear their tokens. A pane whose clear
+  // didn't happen keeps its old entry, so the next run tries again.
   for (const paneId of Object.keys(prev)) {
-    if (desired[paneId]) continue;
-    if (livePanes.has(paneId)) {
-      try { writeTokens(paneId, clearAll, Date.now()); writes++; } catch (e) { console.error(String(e.message)); }
-    }
+    if (desired[paneId] || !livePanes.has(paneId)) continue;
+    if (outOfTime()) { next[paneId] = prev[paneId]; continue; }
+    try { writeTokens(paneId, clearAll); writes++; }
+    catch (e) { next[paneId] = prev[paneId]; console.error(String(e.message)); }
   }
   fs.writeFileSync(STATE_FILE, JSON.stringify(next));
   return { writes, agents: Object.keys(desired).length, desired };
@@ -197,7 +212,7 @@ function main() {
   try { fs.mkdirSync(LOCK); held = true; }
   catch {
     try {
-      if (Date.now() - fs.statSync(LOCK).mtimeMs > 30000) { fs.rmdirSync(LOCK); fs.mkdirSync(LOCK); held = true; }
+      if (Date.now() - fs.statSync(LOCK).mtimeMs > LOCK_STALE_MS) { fs.rmdirSync(LOCK); fs.mkdirSync(LOCK); held = true; }
     } catch { /* lost the race */ }
   }
   if (!held) { try { fs.writeFileSync(DIRTY, '1'); } catch {} return; }
@@ -208,7 +223,7 @@ function main() {
       const r = reconcile();
       if (mode !== 'refresh' || rounds === 0) console.log(`[${mode}] agents=${r.agents} writes=${r.writes}`);
       rounds++;
-    } while (fs.existsSync(DIRTY) && rounds < 5);
+    } while (fs.existsSync(DIRTY) && rounds < 5 && !outOfTime());
   } finally {
     try { fs.rmdirSync(LOCK); } catch {}
   }
