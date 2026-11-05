@@ -91,6 +91,25 @@ and logged to the plugin's stderr.
 - Without the plugin (or after `clear`) the agent rows are blank, because the layout only shows plugin tokens.
 - To uninstall cleanly: run `clear`, `herdr plugin unlink harrisonhjones.herdr-tui-agents-tree`, and restore your config.
 
+## Development
+
+The plugin has no runtime dependencies. The dev tooling is [oxfmt](https://oxc.rs/docs/guide/usage/formatter) (formatter)
+and [oxlint](https://oxc.rs/docs/guide/usage/linter) (linter), installed with `npm ci`. The repo's `.npmrc` pins the
+public npm registry.
+
+| Command                | What it does                                     |
+| ---------------------- | ------------------------------------------------ |
+| `npm run fix`          | Format all files and apply safe lint fixes       |
+| `npm run format`       | Format all files in place                        |
+| `npm run lint:fix`     | Apply safe lint fixes                            |
+| `npm run check`        | Format check, lint check and tests; what CI runs |
+| `npm run format:check` | Fail if any file isn't formatted                 |
+| `npm run lint`         | Fail on any lint warning or error                |
+| `npm test`             | Run the tests (`node --test`)                    |
+
+CI (`.github/workflows/ci.yml`) runs on pull requests and pushes to `main`: format check, lint, a sanity check of
+`herdr-plugin.toml`, and the tests on Linux, Windows and macOS.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
