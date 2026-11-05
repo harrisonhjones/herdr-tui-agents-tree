@@ -145,6 +145,7 @@ function buildDesired(snap) {
   const tabOrder = new Map(snap.tabs.map((t, i) => [t.tab_id, i]));
   const paneOrder = new Map(snap.panes.map((p, i) => [p.pane_id, i]));
   const paneTitle = new Map(snap.panes.map((p) => [p.pane_id, p.terminal_title_stripped]));
+  // oxlint-disable-next-line unicorn/no-array-sort -- sorts a copy; toSorted would drop Node 18
   const workspaces = [...snap.workspaces].sort((a, b) => a.number - b.number);
   const desired = {};
   const demo = fs.existsSync(DEMO);
@@ -152,6 +153,7 @@ function buildDesired(snap) {
   for (const ws of workspaces) {
     const agents = snap.agents
       .filter((a) => a.workspace_id === ws.workspace_id)
+      // oxlint-disable-next-line unicorn/no-array-sort -- filter() already returned a copy
       .sort(
         (a, b) =>
           (tabOrder.get(a.tab_id) ?? 0) - (tabOrder.get(b.tab_id) ?? 0) ||
