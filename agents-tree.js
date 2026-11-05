@@ -294,9 +294,14 @@ function main() {
   }
 }
 
-try {
-  main();
-} catch (e) {
-  console.error(String(e.stack || e));
-  process.exit(1);
+// Only run when herdr (or a user) starts this file; requiring it, as the tests do, just loads the functions.
+if (require.main === module) {
+  try {
+    main();
+  } catch (e) {
+    console.error(String(e.stack || e));
+    process.exit(1);
+  }
 }
+
+module.exports = { truncate, demoSlots, entry, agentLabel, buildDesired };
