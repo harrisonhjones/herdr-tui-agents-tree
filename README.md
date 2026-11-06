@@ -14,8 +14,8 @@ focuses the agent (stock herdr behaviour).
 ![Demo mode: fake workspaces and agents in each status](demo.png)
 
 Requires herdr >= 0.9.5 and Node (any recent version) on PATH. Written for Windows, Linux and macOS. It is pure Node and
-calls herdr through `HERDR_BIN_PATH`. Tested on Windows and Linux, not yet macOS. Config path outside Windows:
-`~/.config/herdr/config.toml`.
+calls herdr through `HERDR_BIN_PATH`. Unit tests run in CI on Linux, Windows and macOS. Used with a live herdr on Linux
+and Windows, not yet macOS. Config path outside Windows: `~/.config/herdr/config.toml`.
 
 ## Install
 
