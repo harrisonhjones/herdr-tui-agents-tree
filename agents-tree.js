@@ -26,8 +26,12 @@ const mode = process.argv[2] || 'refresh';
 // Off unless set to true.
 const CONFIG_DIR = process.env.HERDR_PLUGIN_CONFIG_DIR || __dirname;
 function readConfig() {
-  try { return JSON.parse(fs.readFileSync(path.join(CONFIG_DIR, 'config.json'), 'utf8')); }
-  catch (e) { if (e.code !== 'ENOENT') process.stderr.write(`config.json ignored: ${e.message}\n`); return {}; }
+  try {
+    return JSON.parse(fs.readFileSync(path.join(CONFIG_DIR, 'config.json'), 'utf8'));
+  } catch (e) {
+    if (e.code !== 'ENOENT') process.stderr.write(`config.json ignored: ${e.message}\n`);
+    return {};
+  }
 }
 const SHOW_KIND = readConfig().show_agent_kind === true;
 
@@ -53,11 +57,39 @@ function truncate(s, n) {
 // real agents (in sidebar order) are relabelled with these, workspace by workspace. If there are
 // more real agents than entries here the list repeats with a numeric suffix.
 const DEMO_TREE = [
-  { ws: 'billing-api', agents: [['refactor-invoices', 'working'], ['fix-flaky-tests', 'blocked'], ['write-migration', 'done']] },
-  { ws: 'mobile-app', agents: [['crash-triage', 'working'], ['update-deps', 'idle']] },
-  { ws: 'docs-site', agents: [['rewrite-quickstart', 'done'], ['broken-links', 'idle'], ['api-reference', 'working'], ['changelog', 'unknown']] },
+  {
+    ws: 'billing-api',
+    agents: [
+      ['refactor-invoices', 'working'],
+      ['fix-flaky-tests', 'blocked'],
+      ['write-migration', 'done'],
+    ],
+  },
+  {
+    ws: 'mobile-app',
+    agents: [
+      ['crash-triage', 'working'],
+      ['update-deps', 'idle'],
+    ],
+  },
+  {
+    ws: 'docs-site',
+    agents: [
+      ['rewrite-quickstart', 'done'],
+      ['broken-links', 'idle'],
+      ['api-reference', 'working'],
+      ['changelog', 'unknown'],
+    ],
+  },
   { ws: 'infra', agents: [['terraform-plan', 'blocked']] },
-  { ws: 'data-pipeline', agents: [['backfill-job', 'working'], ['schema-review', 'blocked'], ['cost-report', 'done']] },
+  {
+    ws: 'data-pipeline',
+    agents: [
+      ['backfill-job', 'working'],
+      ['schema-review', 'blocked'],
+      ['cost-report', 'done'],
+    ],
+  },
 ];
 
 function demoSlots(count) {
@@ -66,9 +98,15 @@ function demoSlots(count) {
     const g = DEMO_TREE[w % DEMO_TREE.length];
     const round = Math.floor(w / DEMO_TREE.length);
     const take = g.agents.slice(0, count - slots.length);
-    take.forEach(([name, status], i) => slots.push({
-      ws: round ? `${g.ws}-${round + 1}` : g.ws, name, status, first: i === 0, last: i === take.length - 1,
-    }));
+    take.forEach(([name, status], i) =>
+      slots.push({
+        ws: round ? `${g.ws}-${round + 1}` : g.ws,
+        name,
+        status,
+        first: i === 0,
+        last: i === take.length - 1,
+      }),
+    );
   }
   return slots;
 }
@@ -107,6 +145,7 @@ function buildDesired(snap) {
   const tabOrder = new Map(snap.tabs.map((t, i) => [t.tab_id, i]));
   const paneOrder = new Map(snap.panes.map((p, i) => [p.pane_id, i]));
   const paneTitle = new Map(snap.panes.map((p) => [p.pane_id, p.terminal_title_stripped]));
+  // oxlint-disable-next-line unicorn/no-array-sort -- sorts a copy; toSorted would drop Node 18
   const workspaces = [...snap.workspaces].sort((a, b) => a.number - b.number);
   const desired = {};
   const demo = fs.existsSync(DEMO);
@@ -114,10 +153,16 @@ function buildDesired(snap) {
   for (const ws of workspaces) {
     const agents = snap.agents
       .filter((a) => a.workspace_id === ws.workspace_id)
-      .sort((a, b) =>
-        (tabOrder.get(a.tab_id) ?? 0) - (tabOrder.get(b.tab_id) ?? 0) ||
-        (paneOrder.get(a.pane_id) ?? 0) - (paneOrder.get(b.pane_id) ?? 0));
-    if (demo) { ordered.push(...agents); continue; }
+      // oxlint-disable-next-line unicorn/no-array-sort -- filter() already returned a copy
+      .sort(
+        (a, b) =>
+          (tabOrder.get(a.tab_id) ?? 0) - (tabOrder.get(b.tab_id) ?? 0) ||
+          (paneOrder.get(a.pane_id) ?? 0) - (paneOrder.get(b.pane_id) ?? 0),
+      );
+    if (demo) {
+      ordered.push(...agents);
+      continue;
+    }
     agents.forEach((a, i) => {
       const status = STATUSES.includes(a.agent_status) ? a.agent_status : 'unknown';
       const label = agentLabel(a, tabLabel.get(a.tab_id), paneTitle.get(a.pane_id));
@@ -144,7 +189,11 @@ function writeTokens(paneId, tokens, seq) {
 }
 
 function loadState() {
-  try { return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); } catch { return {}; }
+  try {
+    return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+  } catch {
+    return {};
+  }
 }
 
 function reconcile() {
@@ -162,14 +211,24 @@ function reconcile() {
     const sig = JSON.stringify(d.tokens);
     next[paneId] = sig;
     if (prev[paneId] === sig) continue;
-    try { writeTokens(paneId, d.tokens, Date.now()); writes++; }
-    catch (e) { delete next[paneId]; console.error(String(e.message)); }
+    try {
+      writeTokens(paneId, d.tokens, Date.now());
+      writes++;
+    } catch (e) {
+      delete next[paneId];
+      console.error(String(e.message));
+    }
   }
   // Panes we tagged earlier that no longer host an agent: clear their tokens.
   for (const paneId of Object.keys(prev)) {
     if (desired[paneId]) continue;
     if (livePanes.has(paneId)) {
-      try { writeTokens(paneId, clearAll, Date.now()); writes++; } catch (e) { console.error(String(e.message)); }
+      try {
+        writeTokens(paneId, clearAll, Date.now());
+        writes++;
+      } catch (e) {
+        console.error(String(e.message));
+      }
     }
   }
   fs.writeFileSync(STATE_FILE, JSON.stringify(next));
@@ -190,28 +249,59 @@ function doctor() {
 function main() {
   if (mode === 'doctor') return doctor();
   if (mode === 'demo') fs.writeFileSync(DEMO, '1');
-  if (mode === 'demo-off') { try { fs.unlinkSync(DEMO); } catch {} }
+  if (mode === 'demo-off') {
+    try {
+      fs.unlinkSync(DEMO);
+    } catch {}
+  }
   // Serialize runs: events arrive in bursts. A losing run flags "dirty" and exits;
   // the lock holder loops until no further events arrived.
   let held = false;
-  try { fs.mkdirSync(LOCK); held = true; }
-  catch {
+  try {
+    fs.mkdirSync(LOCK);
+    held = true;
+  } catch {
     try {
-      if (Date.now() - fs.statSync(LOCK).mtimeMs > 30000) { fs.rmdirSync(LOCK); fs.mkdirSync(LOCK); held = true; }
-    } catch { /* lost the race */ }
+      if (Date.now() - fs.statSync(LOCK).mtimeMs > 30000) {
+        fs.rmdirSync(LOCK);
+        fs.mkdirSync(LOCK);
+        held = true;
+      }
+    } catch {
+      /* lost the race */
+    }
   }
-  if (!held) { try { fs.writeFileSync(DIRTY, '1'); } catch {} return; }
+  if (!held) {
+    try {
+      fs.writeFileSync(DIRTY, '1');
+    } catch {}
+    return;
+  }
   try {
     let rounds = 0;
     do {
-      try { fs.unlinkSync(DIRTY); } catch {}
+      try {
+        fs.unlinkSync(DIRTY);
+      } catch {}
       const r = reconcile();
       if (mode !== 'refresh' || rounds === 0) console.log(`[${mode}] agents=${r.agents} writes=${r.writes}`);
       rounds++;
     } while (fs.existsSync(DIRTY) && rounds < 5);
   } finally {
-    try { fs.rmdirSync(LOCK); } catch {}
+    try {
+      fs.rmdirSync(LOCK);
+    } catch {}
   }
 }
 
-try { main(); } catch (e) { console.error(String(e.stack || e)); process.exit(1); }
+// Only run when herdr (or a user) starts this file; requiring it, as the tests do, just loads the functions.
+if (require.main === module) {
+  try {
+    main();
+  } catch (e) {
+    console.error(String(e.stack || e));
+    process.exit(1);
+  }
+}
+
+module.exports = { truncate, demoSlots, entry, agentLabel, buildDesired };
