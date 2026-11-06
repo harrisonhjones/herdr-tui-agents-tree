@@ -27,7 +27,7 @@ jobs:
       - run: npm run format:check
       - run: npm run lint
       - name: Check herdr-plugin.toml
-        run: python3 .github/scripts/check-manifest.py
+        run: npm run check:manifest
 
   test:
     name: Test (${{ matrix.os }}, node ${{ matrix.node }})

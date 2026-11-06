@@ -10,12 +10,14 @@
     "format:check": "oxfmt --check",
     "lint": "oxlint --deny-warnings",
     "lint:fix": "oxlint --fix",
+    "check:manifest": "node scripts/check-manifest.js",
     "fix": "npm run format && npm run lint:fix",
-    "check": "npm run format:check && npm run lint && npm test"
+    "check": "npm run format:check && npm run lint && npm run check:manifest && npm test"
   },
   "devDependencies": {
     "oxfmt": "0.76.0",
-    "oxlint": "1.91.0"
+    "oxlint": "1.91.0",
+    "smol-toml": "1.9.1"
   },
   "engines": {
     "node": ">=20.19"
