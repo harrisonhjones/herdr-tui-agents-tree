@@ -14,8 +14,8 @@ focuses the agent (stock herdr behaviour).
 ![Demo mode: fake workspaces and agents in each status](demo.png)
 
 Requires herdr >= 0.9.5 and Node (any recent version) on PATH. Written for Windows, Linux and macOS. It is pure Node and
-calls herdr through `HERDR_BIN_PATH`. Tested on Windows and Linux, not yet macOS. Config path outside Windows:
-`~/.config/herdr/config.toml`.
+calls herdr through `HERDR_BIN_PATH`. Unit tests run in CI on Linux, Windows and macOS. Used with a live herdr on Linux
+and Windows, not yet macOS. Config path outside Windows: `~/.config/herdr/config.toml`.
 
 ## Install
 
@@ -97,15 +97,16 @@ The plugin has no runtime dependencies. The dev tooling is [oxfmt](https://oxc.r
 and [oxlint](https://oxc.rs/docs/guide/usage/linter) (linter), installed with `npm ci`. The repo's `.npmrc` pins the
 public npm registry.
 
-| Command                | What it does                                     |
-| ---------------------- | ------------------------------------------------ |
-| `npm run fix`          | Format all files and apply safe lint fixes       |
-| `npm run format`       | Format all files in place                        |
-| `npm run lint:fix`     | Apply safe lint fixes                            |
-| `npm run check`        | Format check, lint check and tests; what CI runs |
-| `npm run format:check` | Fail if any file isn't formatted                 |
-| `npm run lint`         | Fail on any lint warning or error                |
-| `npm test`             | Run the tests (`node --test`)                    |
+| Command                  | What it does                                               |
+| ------------------------ | ---------------------------------------------------------- |
+| `npm run fix`            | Format all files and apply safe lint fixes                 |
+| `npm run format`         | Format all files in place                                  |
+| `npm run lint:fix`       | Apply safe lint fixes                                      |
+| `npm run check`          | Format, lint and manifest checks, then tests; what CI runs |
+| `npm run format:check`   | Fail if any file isn't formatted                           |
+| `npm run lint`           | Fail on any lint warning or error                          |
+| `npm run check:manifest` | Sanity-check `herdr-plugin.toml`                           |
+| `npm test`               | Run the tests (`node --test`)                              |
 
 CI (`.github/workflows/ci.yml`) runs on pull requests and pushes to `main`: format check, lint, a sanity check of
 `herdr-plugin.toml`, and the tests on Linux, Windows and macOS.
